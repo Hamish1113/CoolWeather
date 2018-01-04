@@ -1,0 +1,10 @@
+<lite>
+    <dbname value="CoolWeather" />
+    <version value="1" />
+    <list>
+        <mapping class="com.example.yejuan.coolweather.db.City"/>
+        <mapping class="com.example.yejuan.coolweather.db.Province"/>
+        <mapping class="com.example.yejuan.coolweather.db.County"/>
+
+    </list>
+</lite>
