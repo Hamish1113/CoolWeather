@@ -2,6 +2,7 @@ package com.example.yejuan.coolweather;
 
 import android.app.Fragment;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -37,7 +38,8 @@ import static android.widget.Toast.LENGTH_SHORT;
  * Created by yejuan on 2018/1/4.
  */
 
-public class chooseareafragment extends Fragment { public static final int LEVEL_PROVINCE = 0;
+public class chooseareafragment extends Fragment{
+    public static final int LEVEL_PROVINCE = 0;
     public static final int LEVEL_CITY = 1;
     public static final int LEVEL_COUNTY = 2;
     private ProgressDialog progressDialog;
@@ -96,31 +98,42 @@ public class chooseareafragment extends Fragment { public static final int LEVEL
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                                            @Override
-                                            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-
-                                                    if (currentLevel == LEVEL_PROVINCE) {
-                                                        selectedProvince = provinceList.get(position);
-                                                        queryCities();
-                                                    } else if (currentLevel == LEVEL_CITY) {
-                                                        selectedCity = cityList.get(position);
-                                                        queryCounties();
-                                                    }}
-                                            });
-
-
-
-
-                backButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (currentLevel == LEVEL_COUNTY) {
-                            queryCities();
-                        } else if (currentLevel == LEVEL_CITY) {
-                            queryProvinces();
-                        }
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position,
+                                    long id) {
+                if (currentLevel == LEVEL_PROVINCE) {
+                    selectedProvince = provinceList.get(position);
+                    queryCities();
+                } else if (currentLevel == LEVEL_CITY) {
+                    selectedCity = cityList.get(position);
+                    queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    String weatherId = countyList.get(position).getWeatherId();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                        /*instanceof指出对象是否是特定类的一个实例*/
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        activity.requestWeather(weatherId);
                     }
-                });
+                }
+            }
+        });
+        backButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if (currentLevel == LEVEL_COUNTY) {
+                    queryCities();
+                } else if (currentLevel == LEVEL_CITY) {
+                    queryProvinces();
+                }
+            }
+        });
         queryProvinces();
     }
 
@@ -198,20 +211,20 @@ public class chooseareafragment extends Fragment { public static final int LEVEL
     /**
      * 根据传入的地址和类型从服务器上查询省市县数据
      */
-    private  void queryFromServer(String address, final String type){
+    private void queryFromServer(String address, final String type) {
         showProgressDialog();
         HttpUtil.sendOkHttpReqest(address, new Callback() {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseTest = response.body().string();
                 boolean result = false;
-                if ("province".equals(type)) {
+                if ("province".equals(type)){
                     result = Utility.handleProvinResponse(responseTest);
                 } else if ("city".equals(type)) {
                     result = Utility.hanleCityResponse(responseTest,
                             selectedProvince.getId());
                 } else if ("county".equals(type)) {
-                    result = Utility.hanleCountyResponse(responseTest,
+                    result = Utility.handleCountyResponse(responseTest,
                             selectedCity.getId());
                 }
                 if (result) {
@@ -227,45 +240,42 @@ public class chooseareafragment extends Fragment { public static final int LEVEL
                                 queryCounties();
                             }
                         }
-
                     });
-
                 }
             }
-
             @Override
             public void onFailure(Call call, IOException e) {
                 //通过runOnUiThread()方法回到主线程处理逻辑
                 getActivity().runOnUiThread(new Runnable() {
+                    @RequiresApi(api = Build.VERSION_CODES.M)
                     @Override
                     public void run() {
                         closeProgressDialog();
-                        Toast.makeText(getContext(),"加载失败", LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT).show();
                     }
-
                 });
             }
         });
     }
 
-
-            /**
-             * 关闭进度对话框
-             */
-            private void closeProgressDialog() {
-                if (progressDialog != null) {
-                    progressDialog.dismiss();
-                }
-            }
-
-            /**
-             * 显示进度对话框
-             */
-            private void showProgressDialog() {
-                if (progressDialog == null) {
-                    progressDialog = new ProgressDialog(getActivity());
-                    progressDialog.setMessage("正在加载...");
-                    progressDialog.setCanceledOnTouchOutside(false);
-                }
-            }
+    /**
+     * 关闭进度对话框
+     */
+    private void closeProgressDialog() {
+        if (progressDialog != null){
+            progressDialog.dismiss();
         }
+    }
+
+    /**
+     * 显示进度对话框
+     */
+    private void showProgressDialog() {
+        if (progressDialog == null){
+            progressDialog = new ProgressDialog(getActivity());
+            progressDialog.setMessage("正在加载...");
+            progressDialog.setCanceledOnTouchOutside(false);
+        }
+        progressDialog.show();
+    }
+}
